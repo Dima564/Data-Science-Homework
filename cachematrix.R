@@ -1,7 +1,7 @@
 ## Put comments here that give an overall description of what your
 ## functions do
 
-## Write a short comment describing this function
+## Wrapper around R matrix, providing an inverse matrix caching functionality
 
 makeCacheMatrix <- function(x = matrix()) {
   inv <- NULL
@@ -16,7 +16,7 @@ makeCacheMatrix <- function(x = matrix()) {
 }
 
 
-## Write a short comment describing this function
+## Function which calculates inverse of a CacheMatrix and levarages the cache
 
 cacheSolve <- function(x, ...) {
   if (is.null(x$getInv())) {

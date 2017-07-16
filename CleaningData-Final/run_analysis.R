@@ -1,6 +1,7 @@
 library(data.table)
 library(dplyr)
 
+# Download file
 temp <- tempfile()
 download.file("https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip",temp)
 unzip(temp)
@@ -15,7 +16,7 @@ testX <- fread("UCI HAR Dataset/test/X_test.txt")
 testY <- fread("UCI HAR Dataset/test/y_test.txt")
 testSubjects <- fread("UCI HAR Dataset/test/subject_test.txt")
 
-# Reac activity labels
+# Read activity labels
 labels <- fread("UCI HAR Dataset/activity_labels.txt")
 activityLabels <- as.list(as.factor(labels$V2))
 names(activityLabels) <-labels$V1

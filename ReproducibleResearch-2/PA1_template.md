@@ -18,7 +18,6 @@ The variables included in this dataset are:
 
 The dataset is stored in a comma-separated-value (CSV) file and there are a total of 17,568 observations in this dataset.
 
-
 #### Code for reading data:
 
 ```r
@@ -78,14 +77,14 @@ plotData[which.max(plotData$avg.steps),]$interval
 ```
 
 #### Code to describe and show a strategy for imputing missing data
+We change every NA data point with the average of that 5-minute perod
 
 ```r
 data <- data %>% group_by(interval) %>%
   mutate(steps=ifelse(is.na(steps), round(mean(steps, na.rm=T)), steps))
 ```
 
-Hi#### stogram of the total number of steps taken each day after missing values are imputed
-
+#### Histogram of the total number of steps taken each day after missing values are imputed
 
 ```r
 plotData <- data %>% group_by(date) %>% summarize(total.steps=sum(steps))
@@ -100,9 +99,8 @@ ggplot(plotData, aes(total.steps)) + geom_histogram(na.rm=TRUE)
  
 #### Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
 
-
 ```r
-data$weekday <- weekdays(data$date)
+data$weekday <- ifelse(weekdays(data$date) %in% c("Saturday", "Sunday"), "Weekend", "Weekday")
 plotData <- data %>% group_by(weekday, interval) %>% summarize(avg.steps=mean(steps, na.rm=T))
 ggplot(plotData, aes(x=interval, y=avg.steps)) + geom_line() +
   facet_grid(weekday ~ .) +

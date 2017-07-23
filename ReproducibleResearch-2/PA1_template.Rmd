@@ -72,7 +72,7 @@ ggplot(plotData, aes(total.steps)) + geom_histogram(na.rm=TRUE)
  
 #### Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
 ```{r}
-data$weekday <- weekdays(data$date)
+data$weekday <- ifelse(weekdays(data$date) %in% c("Saturday", "Sunday"), "Weekend", "Weekday")
 plotData <- data %>% group_by(weekday, interval) %>% summarize(avg.steps=mean(steps, na.rm=T))
 ggplot(plotData, aes(x=interval, y=avg.steps)) + geom_line() +
   facet_grid(weekday ~ .) +

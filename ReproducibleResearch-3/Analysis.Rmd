@@ -1,0 +1,125 @@
+---
+title: "Analysis of harmful weather events"
+author: "Dima Kovalenko"
+date: "7/25/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+
+This analysis involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+##### Questions addressed
+
+1. Across the United States, which types of events are most harmful with respect to population health?
+2. Across the United States, which types of events have the greatest economic consequences?
+
+
+## Data
+The data for this analysis come in the form of a comma-separated-value file compressed via the bzip2 algorithm to reduce its size. You can download the file from the course web site: 
+- [Storm data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2)
+
+There is also some documentation of the database available. Here you will find how some of the variables are constructed/defined.
+
+- [National Weather Service Storm Data Documentation](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf)
+- [National Climatic Data Center Storm Events FAQ](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf)
+
+The events in the database start in the year 1950 and end in November 2011. In the earlier years of the database there are generally fewer events recorded, most likely due to a lack of good records. More recent years should be considered more complete.
+
+
+## Data Processing 
+
+Here we will include all the required libraries, dowload file, unzip it and load into R session
+```{r loading_data}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+
+# Uncomment you need to download file
+# download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", destfile="data.csv.bz2")
+# Note, this will only work on Linux or MacOS
+# system("bzcat data.csv.bz2 > data.csv")
+
+data <- fread("data.csv")
+# EVTYPE is still messy, we probably need to do more thorought cleaning here!
+
+evtypes <-list("AVALANCHE"="AVALANCE|AVALANCHE",
+  "BLIZZARD" = "BLIZZARD",
+  "COLD/WIND CHILL" = "COLD",
+  "DENSE FOG" = "DENSE FOG",
+  "DENSE SMOKE" = "DENSE SMOKE",
+  "DROUGHT" = "DRY",
+  "DUST STORM" = "DUST",
+  "FLOOD" = "FLOOD",
+  "FROST/FREEZE" = "FREEZE|FROST",
+  "HAIL" = "HAIL",
+  "HEAT" = "BNORMAL WARMTH|TEMPERATURE RECORD|HEAT",
+  "HEAVY RAIN" = "RAIN",
+  "SNOW" = "SNOW|WINTER",
+  "HIGH SURF" = "HIGH SURF|HIGH SEAS|HEAVY SURF",
+  "HIGH WIND" = "HIGH WIND|WIND",
+  "HURRICANE (TYPHOON)" = "HURRICANE",
+  "ICE STORM" = "ICE",
+  "LIGHTNING" = "LIGHTNING",
+  "RIP CURRENT" = "RIP CURRENT",
+  "SEICHE" = "SEICHE",
+  "SLEET" = "SLEET",
+  "THUNDERSTORM WIND" = "THUNDERSTORM WIND|THUNDERSTORM",
+  "TORNADO" = "TORNADO",
+  "TSUNAMI" = "TSUNAMI",
+  "WILDFIRE" = "WILDFIRE",
+  "OTHER" = ".")
+
+data$EVTYPE <- as.factor(sapply(data$EVTYPE, function(e) names(evtypes)[Position(function(pattern) grepl(pattern, e) ,evtypes)] ))
+data$CROPDMGEXP <- tolower(data$CROPDMGEXP)
+data$PROPDMGEXP <- tolower(data$PROPDMGEXP)
+
+```
+
+## Results
+```{r processing data}
+
+magnitudes <- data.table(magnitude=c("", "k", "m", "b"), exp1=c(1, 1000, 1000000, 1000000000), magnitude_num=c(1, 1000, 1000000, 1000000000))
+
+processed <- data %>% inner_join(magnitudes, by=c("PROPDMGEXP"="magnitude")) %>% rename(prop_dmg_exp=magnitude_num) %>% 
+  inner_join(magnitudes, by=c("CROPDMGEXP"="magnitude")) %>% rename(crop_dmg_exp=magnitude_num) %>% 
+  mutate(damage=PROPDMG * prop_dmg_exp + CROPDMG * crop_dmg_exp) %>% 
+  group_by(EVTYPE, STATE) %>% 
+  summarize(total_injuries=sum(INJURIES), 
+            total_fatalities=sum(FATALITIES),
+            total_damage=sum(damage))
+```
+
+Injuries by state:
+```{r injuries, fig.width=10}
+injuries <- processed %>% filter(total_injuries > quantile(processed$total_injuries, 0.9))
+ggplot(injuries, aes(STATE, total_injuries, fill=EVTYPE)) +
+  geom_bar(stat = "identity") +
+  labs(x="State", y="Total Injuries")
+```
+
+Fatalities by state
+```{r fatalities, fig.width=10}
+fatalities <- processed %>% filter(total_fatalities > quantile(processed$total_fatalities, 0.9))
+ggplot(fatalities, aes(STATE, total_fatalities, fill=EVTYPE)) +
+  geom_bar(stat = "identity") + 
+  labs(x="State", y="Total Fatalities")
+```
+
+Next, we will examine economic consequences:
+```{r econmonic_consequences, fig.width=10}
+
+damage <- processed %>% group_by(EVTYPE) %>% summarize(total_damage=sum(total_damage))
+ggplot(damage, aes(reorder(EVTYPE, -total_damage), total_damage)) +
+  geom_bar(stat="identity") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  labs(x="Weather condition", y="Economic Damage", title="Economic Impact of Weather")
+```
+
+
